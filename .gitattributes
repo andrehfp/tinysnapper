@@ -1,0 +1,20 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pdf binary
+
+# Shell scripts should always have LF line endings
+*.sh text eol=lf
+
+# Swift source files
+*.swift text diff=swift
+
+# Documentation
+*.md text diff=markdown

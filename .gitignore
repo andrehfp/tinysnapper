@@ -1,0 +1,62 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# DMG and disk images
+*.dmg
+*.iso
+*.img
+
+# Swift
+.build/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# App packaging
+dist/
+*.app
+
+# IDE
+.codex/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Swift Package Manager
+Package.resolved
+.pins
+

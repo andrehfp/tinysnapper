@@ -1,0 +1,282 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  color: #f5f7fb;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  background: transparent;
+  overflow: hidden;
+}
+
+body.interactive {
+  background: #f3f6fb;
+  min-height: 100vh;
+  overflow: auto;
+}
+
+#viewport {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+body.snapshot #viewport {
+  justify-content: flex-start;
+  align-items: flex-start;
+  min-height: auto;
+  padding: 0;
+}
+
+#viewport.empty-viewport {
+  align-items: center;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+#stage-shell {
+  position: relative;
+}
+
+#stage-wrap {
+  transform-origin: top left;
+}
+
+#stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--stage-radius, 36px);
+}
+
+#stage.placeholder-stage {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+#background-layer {
+  position: absolute;
+  inset: 0;
+}
+
+#background-layer.placeholder-background {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+#card {
+  position: absolute;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  border-radius: var(--card-radius, 0px);
+  clip-path: inset(0 round var(--card-radius, 0px));
+  background: transparent;
+  isolation: isolate;
+}
+
+#card.placeholder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 36px;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: #475569;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+}
+
+#card.placeholder-card h1 {
+  margin: 0;
+  color: #334155;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 650;
+}
+
+#card.placeholder-card p {
+  margin: 0;
+  max-width: 380px;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.placeholder-glyph {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  position: relative;
+  box-sizing: border-box;
+  background: #0f172a;
+}
+
+.placeholder-glyph::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 8px;
+  border: 3px solid rgba(255, 255, 255, 0.94);
+}
+
+.placeholder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.secondary-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.launch-button {
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.launch-button:hover {
+  transform: translateY(-1px);
+}
+
+.launch-button.primary {
+  padding: 14px 18px;
+  background: #0f172a;
+  color: white;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+}
+
+.launch-button.secondary {
+  flex: 1;
+  padding: 11px 14px;
+  background: #eef2f7;
+  color: #334155;
+}
+
+.shortcut-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  clip-path: inset(0 round var(--card-radius, 0px));
+  background: transparent;
+}
+
+#watermark {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 18, 24, 0.48);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(10px);
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.annotation {
+  position: absolute;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.annotation.selected {
+  outline: 2px dashed rgba(53, 131, 255, 0.85);
+  outline-offset: 2px;
+}
+
+.annotation.text {
+  min-width: 120px;
+  padding: 8px 12px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  cursor: move;
+}
+
+.annotation.text[contenteditable="true"] {
+  user-select: text;
+  cursor: text;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.annotation.redact {
+  background: rgba(0, 0, 0, 0.84);
+  border-radius: 8px;
+  cursor: move;
+}
+
+.annotation.shape.rectangle,
+.annotation.shape.rounded,
+.annotation.shape.oval {
+  border: 4px solid currentColor;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: move;
+}
+
+.annotation.shape.rounded {
+  border-radius: 22px;
+}
+
+.annotation.shape.oval {
+  border-radius: 999px;
+}
+
+.annotation.shape.line {
+  height: 0 !important;
+  border-top: 5px solid currentColor;
+  transform-origin: left center;
+  cursor: move;
+}
+
+.annotation.arrow {
+  height: 6px !important;
+  background: currentColor;
+  border-radius: 999px;
+  transform-origin: left center;
+  cursor: move;
+}
+
+.annotation.arrow::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-top: 6px solid currentColor;
+  border-right: 6px solid currentColor;
+  transform: translateY(-50%) rotate(45deg);
+  box-sizing: border-box;
+}
