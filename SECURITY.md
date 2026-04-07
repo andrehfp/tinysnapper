@@ -11,7 +11,7 @@
 
 If you discover a security vulnerability in TinySnapper, please report it responsibly:
 
-1. **Email:** Send details to [andre@andreprado.com](mailto:andre@andreprado.com)
+1. **Email:** Send details to [andre@tinysaas.com.br](mailto:andre@tinysaas.com.br)
 2. **Do not** open a public issue until the vulnerability is resolved
 3. Include:
    - Description of the vulnerability

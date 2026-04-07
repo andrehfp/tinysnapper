@@ -34,7 +34,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders at [andre@andreprado.com](mailto:andre@andreprado.com). All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders at [andre@tinysaas.com.br](mailto:andre@tinysaas.com.br). All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 

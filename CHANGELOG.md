@@ -20,5 +20,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keyboard shortcuts (Cmd+Ctrl+2, Shift+Cmd+2)
 - PNG export functionality
 
-[Unreleased]: https://github.com/andreprado/tinysnapper/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/andreprado/tinysnapper/releases/tag/v1.0.0
+[Unreleased]: https://github.com/andrehfp/tinysnapper/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/andrehfp/tinysnapper/releases/tag/v1.0.0

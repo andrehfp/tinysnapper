@@ -8,7 +8,7 @@ Thank you for your interest in contributing to TinySnapper! This document provid
 
 Before creating a bug report, please:
 
-1. Check if the issue already exists in the [issue tracker](https://github.com/andreprado/tinysnapper/issues)
+1. Check if the issue already exists in the [issue tracker](https://github.com/andrehfp/tinysnapper/issues)
 2. Use the latest version of TinySnapper to verify the bug still exists
 
 When submitting a bug report, please include:

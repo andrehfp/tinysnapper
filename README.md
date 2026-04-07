@@ -198,9 +198,9 @@ Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 
 The project does not currently include automated tests, so local smoke-testing of the app bundle and core flows is especially important.
 
-- 🐛 [Report bugs](https://github.com/andreprado/tinysnapper/issues)
-- ✨ [Request features](https://github.com/andreprado/tinysnapper/issues)
-- 🔧 [Submit pull requests](https://github.com/andreprado/tinysnapper/pulls)
+- 🐛 [Report bugs](https://github.com/andrehfp/tinysnapper/issues)
+- ✨ [Request features](https://github.com/andrehfp/tinysnapper/issues)
+- 🔧 [Submit pull requests](https://github.com/andrehfp/tinysnapper/pulls)
 
 ## License
 
