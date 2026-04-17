@@ -76,10 +76,10 @@ enum CanvasRenderer {
         }
 
         let maxDimension: CGFloat = interactive ? 1200 : 1400
-        let sourceSize = state.sourceImage.size
+        let sourceSize = normalizedImageSize(state.sourceImage.size)
         let scale = min(1, maxDimension / max(sourceSize.width, sourceSize.height))
-        let displayWidth = max(240, floor(sourceSize.width * scale))
-        let displayHeight = max(160, floor(sourceSize.height * scale))
+        let displayWidth = floor(sourceSize.width * scale)
+        let displayHeight = floor(sourceSize.height * scale)
         let paddedWidth = displayWidth + (state.padding * 2)
         let paddedHeight = displayHeight + (state.padding * 2)
 
@@ -158,6 +158,13 @@ enum CanvasRenderer {
         encoder.outputFormatting = [.withoutEscapingSlashes]
         let json = (try? encoder.encode(payload)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         return json.replacingOccurrences(of: "</", with: "<\\/")
+    }
+
+    private static func normalizedImageSize(_ size: NSSize) -> NSSize {
+        NSSize(
+            width: max(1, size.width),
+            height: max(1, size.height)
+        )
     }
 
     private static func resource(named name: String, extension ext: String) -> String {
