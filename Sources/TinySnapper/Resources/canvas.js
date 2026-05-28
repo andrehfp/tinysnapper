@@ -11,6 +11,7 @@
     nextZ: 1,
     drag: null,
     create: null,
+    editingTextId: null,
   };
 
   let stageMetrics = {
@@ -367,23 +368,44 @@
   }
 
   function handleKeyDown(event) {
+    if (editableTextElement(event.target)) {
+      return;
+    }
+
+    if (event.key === "Enter" && state.selectedId) {
+      const annotation = findAnnotation(state.selectedId);
+      const element = overlay.querySelector(`[data-id="${state.selectedId}"]`);
+      if (annotation?.kind === "text" && element) {
+        event.preventDefault();
+        event.stopPropagation();
+        beginTextEdit(element, annotation.id);
+      }
+      return;
+    }
+
     if ((event.key === "Delete" || event.key === "Backspace") && state.selectedId) {
       const index = state.annotations.findIndex((item) => item.id === state.selectedId);
       if (index >= 0) {
+        event.preventDefault();
+        event.stopPropagation();
         state.annotations.splice(index, 1);
         state.selectedId = null;
         renderAnnotations();
         syncAnnotations();
       }
+      return;
     }
 
     if (event.key === "Escape") {
+      event.preventDefault();
       state.tool = null;
       state.selectedId = null;
       state.drag = null;
       state.create = null;
+      state.editingTextId = null;
       removePreview();
       renderAnnotations();
+      notifyToolChanged();
     }
   }
 
@@ -506,15 +528,95 @@
     if (!annotation) {
       return;
     }
+
+    if (state.editingTextId === id && element.getAttribute("contenteditable") === "true") {
+      element.focus();
+      selectText(element);
+      return;
+    }
+
+    if (state.editingTextId && state.editingTextId !== id) {
+      const currentElement = overlay.querySelector(`[data-id="${state.editingTextId}"]`);
+      currentElement?.blur();
+    }
+
+    const originalText = annotation.text || "Text";
+    let finished = false;
+
+    state.editingTextId = id;
+    state.selectedId = id;
+    element.classList.add("selected");
     element.setAttribute("contenteditable", "true");
+    element.setAttribute("spellcheck", "false");
     element.focus();
     selectText(element);
-    element.addEventListener("blur", () => {
-      annotation.text = element.textContent || "Text";
+
+    const finish = (commit) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+
+      if (commit) {
+        annotation.text = normalizedEditableText(element) || "Text";
+        fitTextAnnotationToElement(annotation, element);
+      } else {
+        annotation.text = originalText;
+      }
+
+      state.editingTextId = null;
+      element.removeEventListener("keydown", handleTextEditKeyDown);
       element.removeAttribute("contenteditable");
+      element.removeAttribute("spellcheck");
       renderAnnotations();
       syncAnnotations();
-    }, { once: true });
+    };
+
+    const handleBlur = () => {
+      finish(true);
+    };
+
+    function handleTextEditKeyDown(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(true);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(false);
+        return;
+      }
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.stopPropagation();
+      }
+    }
+
+    element.addEventListener("keydown", handleTextEditKeyDown);
+    element.addEventListener("blur", handleBlur, { once: true });
+  }
+
+  function editableTextElement(target) {
+    if (!(target instanceof Node)) {
+      return null;
+    }
+    const element = target instanceof Element ? target : target.parentElement;
+    return element?.closest('.annotation.text[contenteditable="true"]') || null;
+  }
+
+  function normalizedEditableText(element) {
+    return (element.innerText || element.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .trim();
+  }
+
+  function fitTextAnnotationToElement(annotation, element) {
+    annotation.width = Math.max(120, Math.ceil(element.scrollWidth));
+    annotation.height = Math.max(42, Math.ceil(element.scrollHeight));
   }
 
   function stagePoint(event) {
@@ -552,6 +654,16 @@
     postNative({
       type: "annotationsChanged",
       annotations: state.annotations,
+    });
+  }
+
+  function notifyToolChanged() {
+    if (!interactive) {
+      return;
+    }
+    postNative({
+      type: "toolChanged",
+      tool: state.tool,
     });
   }
 

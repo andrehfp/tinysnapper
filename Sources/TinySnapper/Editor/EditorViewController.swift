@@ -72,7 +72,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
     private var canvasLoaded = false
     private var currentTool: String?
     private var isAdvancedExpanded = false
-    private var isAnnotationsExpanded = false
+    private var isAnnotationsExpanded = true
 
     init(
         state: EditorState,
@@ -183,9 +183,29 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         saveButton.target = self
         saveButton.action = #selector(saveAction)
 
-        [textToolButton, arrowToolButton, shapeToolButton, redactToolButton, copyButton, saveButton].forEach {
+        [copyButton, saveButton].forEach {
             $0.bezelStyle = .rounded
             $0.setButtonType(.momentaryPushIn)
+        }
+
+        let toolButtons = [
+            (textToolButton, "textformat", "Text annotation"),
+            (arrowToolButton, "arrow.up.right", "Arrow annotation"),
+            (shapeToolButton, "rectangle", "Shape annotation"),
+            (redactToolButton, "rectangle.fill", "Redact area"),
+        ]
+
+        for (button, symbolName, tooltip) in toolButtons {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.bezelStyle = .rounded
+            button.setButtonType(.toggle)
+            button.controlSize = .regular
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)
+            button.imagePosition = .imageLeading
+            button.imageScaling = .scaleProportionallyDown
+            button.toolTip = tooltip
+            button.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 82).isActive = true
         }
 
         copyButton.keyEquivalent = "c"
@@ -202,22 +222,29 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         statusLabel.stringValue = "Ready"
         statusLabel.textColor = .secondaryLabelColor
 
-        let trailing = NSStackView(views: [statusLabel, NSView(), copyButton, saveButton])
-        trailing.orientation = .horizontal
-        trailing.spacing = 10
-        trailing.alignment = .centerY
-        trailing.translatesAutoresizingMaskIntoConstraints = false
+        let annotationTools = NSStackView(views: [textToolButton, arrowToolButton, shapeToolButton, redactToolButton])
+        annotationTools.orientation = .horizontal
+        annotationTools.spacing = 8
+        annotationTools.alignment = .centerY
+        annotationTools.distribution = .fillEqually
+
+        let spacer = NSView()
+        let toolbarStack = NSStackView(views: [annotationTools, statusLabel, spacer, copyButton, saveButton])
+        toolbarStack.orientation = .horizontal
+        toolbarStack.spacing = 10
+        toolbarStack.alignment = .centerY
+        toolbarStack.translatesAutoresizingMaskIntoConstraints = false
 
         let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(trailing)
+        container.addSubview(toolbarStack)
 
         NSLayoutConstraint.activate([
             container.heightAnchor.constraint(equalToConstant: 52),
-            trailing.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
-            trailing.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
-            trailing.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
-            trailing.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
+            toolbarStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+            toolbarStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
+            toolbarStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
+            toolbarStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
         ])
 
         return container
@@ -279,15 +306,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         advancedRows.translatesAutoresizingMaskIntoConstraints = false
         configureEmbeddedRow(advancedContainer, content: advancedRows)
 
-        let toolsStack = NSStackView(views: [textToolButton, arrowToolButton, shapeToolButton, redactToolButton])
-        toolsStack.orientation = .horizontal
-        toolsStack.spacing = 8
-        toolsStack.alignment = .centerY
-        toolsStack.distribution = .fillEqually
-        toolsStack.translatesAutoresizingMaskIntoConstraints = false
-
         let annotationsRows = NSStackView(views: [
-            toolsStack,
             labeledRow("Color", control: annotationColorWell),
             shapeTypeRow,
         ])
@@ -409,7 +428,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         [textToolButton, arrowToolButton, shapeToolButton, redactToolButton].forEach {
             $0.target = self
             $0.bezelStyle = .rounded
-            $0.setButtonType(.momentaryPushIn)
+            $0.setButtonType(.toggle)
         }
 
         textToolButton.action = #selector(textToolAction)
@@ -529,8 +548,10 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
 
         for (button, tool) in buttons {
             let selected = currentTool == tool
+            button.state = selected ? .on : .off
             button.contentTintColor = selected ? .white : .labelColor
             button.bezelColor = selected ? .controlAccentColor : nil
+            button.font = NSFont.systemFont(ofSize: 12, weight: selected ? .semibold : .medium)
         }
     }
 
@@ -744,6 +765,10 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             if let annotations = body["annotations"] {
                 updateAnnotations(from: annotations)
             }
+        case "toolChanged":
+            currentTool = body["tool"] as? String
+            updateToolButtonState()
+            updateControlVisibility()
         case "launchAction":
             guard let action = body["action"] as? String else { return }
             switch action {

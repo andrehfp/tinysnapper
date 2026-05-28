@@ -1,12 +1,19 @@
 import AppKit
+import CoreGraphics
 import Foundation
 
 enum CaptureError: Error {
     case failed(message: String)
+    case screenRecordingPermissionDenied
 }
 
 final class CaptureService {
     func captureInteractive(completion: @escaping @Sendable (Result<NSImage?, CaptureError>) -> Void) {
+        guard Self.hasScreenRecordingPermission() else {
+            completion(.failure(.screenRecordingPermissionDenied))
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString)
@@ -54,5 +61,9 @@ final class CaptureService {
                 completion(.failure(.failed(message: stderr.trimmingCharacters(in: .whitespacesAndNewlines))))
             }
         }
+    }
+
+    private static func hasScreenRecordingPermission() -> Bool {
+        CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess()
     }
 }

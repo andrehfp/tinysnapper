@@ -85,10 +85,7 @@ final class AppCoordinator: NSObject {
                 case .success(.none):
                     break
                 case .failure(let error):
-                    self.showError(
-                        title: "Capture Failed",
-                        message: self.captureErrorMessage(for: error)
-                    )
+                    self.showCaptureError(error)
                 }
             }
         }
@@ -210,14 +207,37 @@ final class AppCoordinator: NSObject {
 
     private func captureErrorMessage(for error: CaptureError) -> String {
         switch error {
+        case .screenRecordingPermissionDenied:
+            return "TinySnapper needs Screen Recording permission before it can capture your screen.\n\nEnable it in System Settings > Privacy & Security > Screen & System Audio Recording, then quit and reopen TinySnapper."
         case .failed(let message):
             let normalizedMessage = message.localizedLowercase
             if normalizedMessage.contains("screen") ||
                 normalizedMessage.contains("permission") ||
                 normalizedMessage.contains("could not create image from rect") {
-                return "\(message)\n\nGrant Screen Recording permission in System Settings > Privacy & Security > Screen & System Audio Recording."
+                return "\(message)\n\nEnable Screen Recording permission in System Settings > Privacy & Security > Screen & System Audio Recording, then quit and reopen TinySnapper."
             }
             return message.isEmpty ? "The screenshot command failed." : message
+        }
+    }
+
+    private func showCaptureError(_ error: CaptureError) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Capture Failed"
+        alert.informativeText = captureErrorMessage(for: error)
+
+        switch error {
+        case .screenRecordingPermissionDenied:
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "OK")
+        case .failed:
+            alert.addButton(withTitle: "OK")
+        }
+
+        if alert.runModal() == .alertFirstButtonReturn,
+           case .screenRecordingPermissionDenied = error,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
         }
     }
 

@@ -220,6 +220,7 @@ body.snapshot #viewport {
   font-size: 28px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: pre-wrap;
   text-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
   cursor: move;
 }
