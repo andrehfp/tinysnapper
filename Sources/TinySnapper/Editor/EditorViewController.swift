@@ -2,6 +2,22 @@ import AppKit
 import Foundation
 import WebKit
 
+private final class SidebarPanelView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor(calibratedRed: 0.985, green: 0.988, blue: 0.993, alpha: 1).cgColor
+        layer?.cornerRadius = 8
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+}
+
 @MainActor
 final class EditorViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
     private let exportService: ExportService
@@ -24,14 +40,15 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
 
     private let statusLabel = NSTextField(labelWithString: "")
 
-    private let textToolButton = NSButton(title: "Text", target: nil, action: nil)
-    private let arrowToolButton = NSButton(title: "Arrow", target: nil, action: nil)
-    private let shapeToolButton = NSButton(title: "Shape", target: nil, action: nil)
-    private let redactToolButton = NSButton(title: "Redact", target: nil, action: nil)
+    private let textToolButton = NSButton(title: EditorToolShortcut.text.buttonTitle, target: nil, action: nil)
+    private let arrowToolButton = NSButton(title: EditorToolShortcut.arrow.buttonTitle, target: nil, action: nil)
+    private let shapeToolButton = NSButton(title: EditorToolShortcut.shape.buttonTitle, target: nil, action: nil)
+    private let redactToolButton = NSButton(title: EditorToolShortcut.redact.buttonTitle, target: nil, action: nil)
     private let copyButton = NSButton(title: "Copy", target: nil, action: nil)
     private let saveButton = NSButton(title: "Save PNG", target: nil, action: nil)
 
     private let paddingSlider = NSSlider(value: 72, minValue: 0, maxValue: 180, target: nil, action: nil)
+    private let paddingValueLabel = NSTextField(labelWithString: "")
     private let ratioPopup = NSPopUpButton()
     private let backgroundModePopup = NSPopUpButton()
     private let backgroundPresetPopup = NSPopUpButton()
@@ -40,9 +57,13 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
     private let gradientEndWell = NSColorWell()
     private let customBackgroundButton = NSButton(title: "Choose Background", target: nil, action: nil)
     private let shadowSlider = NSSlider(value: 32, minValue: 0, maxValue: 80, target: nil, action: nil)
+    private let shadowValueLabel = NSTextField(labelWithString: "")
     private let cornerSlider = NSSlider(value: 28, minValue: 0, maxValue: 80, target: nil, action: nil)
+    private let cornerValueLabel = NSTextField(labelWithString: "")
     private let tiltXSlider = NSSlider(value: 0, minValue: -20, maxValue: 20, target: nil, action: nil)
+    private let tiltXValueLabel = NSTextField(labelWithString: "")
     private let tiltYSlider = NSSlider(value: 0, minValue: -20, maxValue: 20, target: nil, action: nil)
+    private let tiltYValueLabel = NSTextField(labelWithString: "")
     private let resetTiltButton = NSButton(title: "Reset Tilt", target: nil, action: nil)
     private let watermarkCheckbox = NSButton(checkboxWithTitle: "Show Watermark", target: nil, action: nil)
     private let watermarkField = NSTextField(string: "")
@@ -73,6 +94,15 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
     private var currentTool: String?
     private var isAdvancedExpanded = false
     private var isAnnotationsExpanded = true
+
+    private var annotationToolButtons: [(NSButton, EditorToolShortcut)] {
+        [
+            (textToolButton, .text),
+            (arrowToolButton, .arrow),
+            (shapeToolButton, .shape),
+            (redactToolButton, .redact),
+        ]
+    }
 
     init(
         state: EditorState,
@@ -109,14 +139,16 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         let sidebarContainer = NSView()
         sidebarContainer.translatesAutoresizingMaskIntoConstraints = false
         sidebarContainer.wantsLayer = true
-        sidebarContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        sidebarContainer.layer?.backgroundColor = NSColor(calibratedRed: 0.965, green: 0.972, blue: 0.982, alpha: 1).cgColor
+        sidebarContainer.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+        sidebarContainer.layer?.borderWidth = 1
         sidebarContainer.addSubview(sidePanel)
         NSLayoutConstraint.activate([
             sidePanel.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor),
             sidePanel.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor),
             sidePanel.topAnchor.constraint(equalTo: sidebarContainer.topAnchor),
             sidePanel.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor),
-            sidebarContainer.widthAnchor.constraint(equalToConstant: 300),
+            sidebarContainer.widthAnchor.constraint(equalToConstant: 320),
         ])
 
         let webContainer = NSView()
@@ -137,7 +169,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             sidebarContainer.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             sidebarContainer.topAnchor.constraint(equalTo: contentContainer.topAnchor),
             sidebarContainer.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
-            sidebarContainer.widthAnchor.constraint(equalToConstant: 300),
+            sidebarContainer.widthAnchor.constraint(equalToConstant: 320),
 
             webContainer.leadingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor),
             webContainer.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
@@ -188,22 +220,16 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             $0.setButtonType(.momentaryPushIn)
         }
 
-        let toolButtons = [
-            (textToolButton, "textformat", "Text annotation"),
-            (arrowToolButton, "arrow.up.right", "Arrow annotation"),
-            (shapeToolButton, "rectangle", "Shape annotation"),
-            (redactToolButton, "rectangle.fill", "Redact area"),
-        ]
-
-        for (button, symbolName, tooltip) in toolButtons {
+        for (button, shortcut) in annotationToolButtons {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.bezelStyle = .rounded
             button.setButtonType(.toggle)
             button.controlSize = .regular
-            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)
+            button.title = shortcut.buttonTitle
+            button.image = NSImage(systemSymbolName: shortcut.symbolName, accessibilityDescription: shortcut.accessibilityDescription)
             button.imagePosition = .imageLeading
             button.imageScaling = .scaleProportionallyDown
-            button.toolTip = tooltip
+            button.toolTip = shortcut.tooltip
             button.font = NSFont.systemFont(ofSize: 12, weight: .medium)
             button.widthAnchor.constraint(greaterThanOrEqualToConstant: 82).isActive = true
         }
@@ -252,10 +278,10 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
 
     private func buildSidePanel() -> NSScrollView {
         sidePanelStack.orientation = .vertical
-        sidePanelStack.spacing = 14
-        sidePanelStack.alignment = .leading
+        sidePanelStack.spacing = 12
+        sidePanelStack.alignment = .width
         sidePanelStack.translatesAutoresizingMaskIntoConstraints = false
-        sidePanelStack.edgeInsets = NSEdgeInsets(top: 18, left: 18, bottom: 18, right: 18)
+        sidePanelStack.edgeInsets = NSEdgeInsets(top: 16, left: 14, bottom: 18, right: 14)
         sidePanelStack.detachesHiddenViews = true
         sidePanelStack.setViews([], in: .leading)
 
@@ -270,11 +296,11 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         configureEmbeddedRow(quickPresetsRow, content: quickPresetButtons)
 
         let canvasStack = NSStackView(views: [
-            labeledRow("Padding", control: paddingSlider)
+            controlRow("Padding", control: paddingSlider, valueLabel: paddingValueLabel)
         ])
         canvasStack.orientation = .vertical
         canvasStack.spacing = 12
-        canvasStack.alignment = .leading
+        canvasStack.alignment = .width
         canvasStack.translatesAutoresizingMaskIntoConstraints = false
 
         let styleStack = NSStackView(views: [
@@ -284,48 +310,56 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             gradientStartRow,
             gradientEndRow,
             customBackgroundRow,
-            labeledRow("Shadow", control: shadowSlider),
-            labeledRow("Corner Radius", control: cornerSlider),
+            controlRow("Shadow", control: shadowSlider, valueLabel: shadowValueLabel),
+            controlRow("Corner Radius", control: cornerSlider, valueLabel: cornerValueLabel),
         ])
         styleStack.orientation = .vertical
         styleStack.spacing = 12
-        styleStack.alignment = .leading
+        styleStack.alignment = .width
         styleStack.translatesAutoresizingMaskIntoConstraints = false
 
         let advancedRows = NSStackView(views: [
             labeledRow("Aspect Ratio", control: ratioPopup),
-            labeledRow("Tilt X", control: tiltXSlider),
-            labeledRow("Tilt Y", control: tiltYSlider),
+            controlRow("Tilt X", control: tiltXSlider, valueLabel: tiltXValueLabel),
+            controlRow("Tilt Y", control: tiltYSlider, valueLabel: tiltYValueLabel),
             resetTiltButton,
             watermarkCheckbox,
             watermarkTextRow,
         ])
         advancedRows.orientation = .vertical
         advancedRows.spacing = 12
-        advancedRows.alignment = .leading
+        advancedRows.alignment = .width
         advancedRows.translatesAutoresizingMaskIntoConstraints = false
         configureEmbeddedRow(advancedContainer, content: advancedRows)
 
         let annotationsRows = NSStackView(views: [
             labeledRow("Color", control: annotationColorWell),
             shapeTypeRow,
+            shortcutLegend(),
         ])
         annotationsRows.orientation = .vertical
         annotationsRows.spacing = 12
-        annotationsRows.alignment = .leading
+        annotationsRows.alignment = .width
         annotationsRows.translatesAutoresizingMaskIntoConstraints = false
         configureEmbeddedRow(annotationsContainer, content: annotationsRows)
 
-        sidePanelStack.addArrangedSubview(sectionTitle("Quick Styles"))
-        sidePanelStack.addArrangedSubview(quickPresetsRow)
-        sidePanelStack.addArrangedSubview(sectionTitle("Canvas"))
-        sidePanelStack.addArrangedSubview(canvasStack)
-        sidePanelStack.addArrangedSubview(sectionTitle("Style"))
-        sidePanelStack.addArrangedSubview(styleStack)
-        sidePanelStack.addArrangedSubview(advancedDisclosureButton)
-        sidePanelStack.addArrangedSubview(advancedContainer)
-        sidePanelStack.addArrangedSubview(annotationsDisclosureButton)
-        sidePanelStack.addArrangedSubview(annotationsContainer)
+        sidePanelStack.addArrangedSubview(sidebarSection(
+            title: "Quick Styles",
+            subtitle: "One-click presets for the screenshot frame.",
+            content: quickPresetsRow
+        ))
+        sidePanelStack.addArrangedSubview(sidebarSection(
+            title: "Canvas",
+            subtitle: "Control the space around the captured image.",
+            content: canvasStack
+        ))
+        sidePanelStack.addArrangedSubview(sidebarSection(
+            title: "Style",
+            subtitle: "Set the background, depth, and corner treatment.",
+            content: styleStack
+        ))
+        sidePanelStack.addArrangedSubview(sidebarDisclosureSection(button: advancedDisclosureButton, content: advancedContainer))
+        sidePanelStack.addArrangedSubview(sidebarDisclosureSection(button: annotationsDisclosureButton, content: annotationsContainer))
 
         let document = FlippedView()
         document.translatesAutoresizingMaskIntoConstraints = false
@@ -376,7 +410,26 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             $0.target = self
             $0.action = #selector(sliderChanged(_:))
             $0.translatesAutoresizingMaskIntoConstraints = false
-            $0.widthAnchor.constraint(equalToConstant: 220).isActive = true
+            $0.widthAnchor.constraint(equalToConstant: 236).isActive = true
+        }
+
+        [ratioPopup, backgroundModePopup, backgroundPresetPopup, shapeKindPopup].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            $0.widthAnchor.constraint(equalToConstant: 236).isActive = true
+        }
+
+        [customBackgroundButton, resetTiltButton].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            $0.widthAnchor.constraint(equalToConstant: 236).isActive = true
+        }
+
+        watermarkField.translatesAutoresizingMaskIntoConstraints = false
+        watermarkField.widthAnchor.constraint(equalToConstant: 236).isActive = true
+
+        [solidColorWell, gradientStartWell, gradientEndWell, annotationColorWell].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            $0.widthAnchor.constraint(equalToConstant: 44).isActive = true
+            $0.heightAnchor.constraint(equalToConstant: 24).isActive = true
         }
 
         resetTiltButton.target = self
@@ -401,6 +454,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             button.bezelStyle = .rounded
             button.setButtonType(.momentaryPushIn)
             button.controlSize = .small
+            button.font = NSFont.systemFont(ofSize: 11, weight: .medium)
         }
 
         configureRow(backgroundPresetRow, labelText: "Preset", control: backgroundPresetPopup)
@@ -417,6 +471,8 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         advancedDisclosureButton.setButtonType(.momentaryPushIn)
         advancedDisclosureButton.isBordered = false
         advancedDisclosureButton.contentTintColor = .labelColor
+        advancedDisclosureButton.alignment = .left
+        advancedDisclosureButton.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
 
         annotationsDisclosureButton.target = self
         annotationsDisclosureButton.action = #selector(toggleAnnotationsSection)
@@ -424,11 +480,13 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         annotationsDisclosureButton.setButtonType(.momentaryPushIn)
         annotationsDisclosureButton.isBordered = false
         annotationsDisclosureButton.contentTintColor = .labelColor
+        annotationsDisclosureButton.alignment = .left
+        annotationsDisclosureButton.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
 
-        [textToolButton, arrowToolButton, shapeToolButton, redactToolButton].forEach {
-            $0.target = self
-            $0.bezelStyle = .rounded
-            $0.setButtonType(.toggle)
+        for (button, _) in annotationToolButtons {
+            button.target = self
+            button.bezelStyle = .rounded
+            button.setButtonType(.toggle)
         }
 
         textToolButton.action = #selector(textToolAction)
@@ -451,6 +509,139 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
             content.topAnchor.constraint(equalTo: row.topAnchor),
             content.bottomAnchor.constraint(equalTo: row.bottomAnchor),
         ])
+    }
+
+    private func sidebarSection(title: String, subtitle: String? = nil, content: NSView) -> NSView {
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        titleLabel.textColor = .labelColor
+
+        var headerViews: [NSView] = [titleLabel]
+        if let subtitle {
+            let subtitleLabel = NSTextField(wrappingLabelWithString: subtitle)
+            subtitleLabel.font = NSFont.systemFont(ofSize: 11, weight: .regular)
+            subtitleLabel.textColor = .secondaryLabelColor
+            subtitleLabel.maximumNumberOfLines = 2
+            headerViews.append(subtitleLabel)
+        }
+
+        let headerStack = NSStackView(views: headerViews)
+        headerStack.orientation = .vertical
+        headerStack.spacing = 3
+        headerStack.alignment = .leading
+        headerStack.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = NSStackView(views: [headerStack, content])
+        stack.orientation = .vertical
+        stack.spacing = 12
+        stack.alignment = .width
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let panel = SidebarPanelView()
+        panel.translatesAutoresizingMaskIntoConstraints = false
+        panel.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: panel.topAnchor, constant: 12),
+            stack.bottomAnchor.constraint(equalTo: panel.bottomAnchor, constant: -12),
+        ])
+        return panel
+    }
+
+    private func sidebarDisclosureSection(button: NSButton, content: NSView) -> NSView {
+        let stack = NSStackView(views: [button, content])
+        stack.orientation = .vertical
+        stack.spacing = 10
+        stack.alignment = .width
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let panel = SidebarPanelView()
+        panel.translatesAutoresizingMaskIntoConstraints = false
+        panel.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: panel.topAnchor, constant: 10),
+            stack.bottomAnchor.constraint(equalTo: panel.bottomAnchor, constant: -12),
+        ])
+        return panel
+    }
+
+    private func controlRow(_ labelText: String, control: NSView, valueLabel: NSTextField) -> NSView {
+        let label = NSTextField(labelWithString: labelText)
+        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .labelColor
+
+        valueLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        valueLabel.textColor = .secondaryLabelColor
+        valueLabel.alignment = .right
+
+        let spacer = NSView()
+        let header = NSStackView(views: [label, spacer, valueLabel])
+        header.orientation = .horizontal
+        header.spacing = 8
+        header.alignment = .centerY
+        header.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = NSStackView(views: [header, control])
+        stack.orientation = .vertical
+        stack.spacing = 6
+        stack.alignment = .width
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }
+
+    private func shortcutLegend() -> NSView {
+        let title = NSTextField(labelWithString: "Shortcuts")
+        title.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        title.textColor = .secondaryLabelColor
+
+        let rows = EditorToolShortcut.keyboardShortcuts.map { shortcut in
+            shortcutLegendItem(shortcut)
+        }
+
+        let list = NSStackView(views: rows)
+        list.orientation = .vertical
+        list.spacing = 7
+        list.alignment = .width
+        list.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = NSStackView(views: [title, list])
+        stack.orientation = .vertical
+        stack.spacing = 8
+        stack.alignment = .width
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }
+
+    private func shortcutLegendItem(_ shortcut: EditorToolShortcut) -> NSView {
+        let keyLabel = NSTextField(labelWithString: shortcut.display)
+        keyLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .semibold)
+        keyLabel.alignment = .center
+        keyLabel.textColor = .labelColor
+        keyLabel.wantsLayer = true
+        keyLabel.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        keyLabel.layer?.cornerRadius = 4
+        keyLabel.layer?.borderWidth = 1
+        keyLabel.layer?.borderColor = NSColor.separatorColor.cgColor
+        keyLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            keyLabel.widthAnchor.constraint(equalToConstant: 24),
+            keyLabel.heightAnchor.constraint(equalToConstant: 22),
+        ])
+
+        let label = NSTextField(labelWithString: shortcut.title)
+        label.font = NSFont.systemFont(ofSize: 12, weight: .regular)
+        label.textColor = .labelColor
+
+        let spacer = NSView()
+        let row = NSStackView(views: [keyLabel, label, spacer])
+        row.orientation = .horizontal
+        row.spacing = 8
+        row.alignment = .centerY
+        row.translatesAutoresizingMaskIntoConstraints = false
+        return row
     }
 
     private func sectionTitle(_ text: String) -> NSTextField {
@@ -488,6 +679,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         annotationColorWell.color = state.annotationColor
         shapeKindPopup.selectItem(at: ShapeKind.allCases.firstIndex(of: state.selectedShapeKind) ?? 0)
         customBackgroundButton.title = state.customBackgroundImage == nil ? "Choose Background" : "Replace Background"
+        updateSliderValueLabels()
         updateDisclosureTitles()
         updateControlVisibility()
         refreshQuickPresetButtons()
@@ -496,6 +688,14 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
 
     private func setReadyStatus() {
         statusLabel.stringValue = state.isPlaceholder ? "Ready" : "Screenshot ready"
+    }
+
+    private func updateSliderValueLabels() {
+        paddingValueLabel.stringValue = "\(Int(round(paddingSlider.doubleValue))) px"
+        shadowValueLabel.stringValue = "\(Int(round(shadowSlider.doubleValue)))"
+        cornerValueLabel.stringValue = "\(Int(round(cornerSlider.doubleValue))) px"
+        tiltXValueLabel.stringValue = "\(Int(round(tiltXSlider.doubleValue))) deg"
+        tiltYValueLabel.stringValue = "\(Int(round(tiltYSlider.doubleValue))) deg"
     }
 
     private func renderCanvas() {
@@ -539,15 +739,8 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
     }
 
     private func updateToolButtonState() {
-        let buttons: [(NSButton, String)] = [
-            (textToolButton, "text"),
-            (arrowToolButton, "arrow"),
-            (shapeToolButton, "shape"),
-            (redactToolButton, "redact"),
-        ]
-
-        for (button, tool) in buttons {
-            let selected = currentTool == tool
+        for (button, shortcut) in annotationToolButtons {
+            let selected = currentTool == shortcut.tool
             button.state = selected ? .on : .off
             button.contentTintColor = selected ? .white : .labelColor
             button.bezelColor = selected ? .controlAccentColor : nil
@@ -691,6 +884,7 @@ final class EditorViewController: NSViewController, WKNavigationDelegate, WKScri
         default:
             break
         }
+        updateSliderValueLabels()
         renderCanvas()
     }
 

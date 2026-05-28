@@ -16,6 +16,7 @@ TinySnapper is a small native macOS menu bar app for capturing screenshots and c
 - 🎨 **Styled Output** — Copy beautifully styled screenshots to clipboard
 - 📋 **Clipboard Integration** — Open images directly from clipboard or file
 - ⌨️ **Keyboard Shortcuts** — Fast capture with Cmd+Ctrl+2 and Shift+Cmd+2
+- 🖊️ **Editor Tool Shortcuts** — Switch between select, text, arrow, shape, and redact with V/T/A/S/R
 - 🚀 **Launch at Login** — Optional auto-start with macOS
 - 💾 **PNG Export** — Save screenshots locally
 
@@ -210,4 +211,3 @@ TinySnapper is licensed under the [MIT License](LICENSE).
 
 - Built with Swift and AppKit
 - Inspired by the need for quick, beautiful screenshots
-

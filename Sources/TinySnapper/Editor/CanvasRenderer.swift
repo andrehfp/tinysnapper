@@ -31,6 +31,7 @@ enum CanvasRenderer {
         let annotations: [Annotation]
         let annotationColor: String
         let shapeKind: String
+        let toolShortcuts: [EditorToolShortcut]
 
         var stageSize: CGSize {
             CGSize(width: stageWidth, height: stageHeight)
@@ -71,7 +72,8 @@ enum CanvasRenderer {
                 watermarkText: state.watermarkText,
                 annotations: [],
                 annotationColor: state.annotationColor.hexString,
-                shapeKind: state.selectedShapeKind.rawValue
+                shapeKind: state.selectedShapeKind.rawValue,
+                toolShortcuts: EditorToolShortcut.keyboardShortcuts
             )
         }
 
@@ -126,7 +128,8 @@ enum CanvasRenderer {
             watermarkText: state.watermarkText,
             annotations: state.annotations,
             annotationColor: state.annotationColor.hexString,
-            shapeKind: state.selectedShapeKind.rawValue
+            shapeKind: state.selectedShapeKind.rawValue,
+            toolShortcuts: EditorToolShortcut.keyboardShortcuts
         )
     }
 

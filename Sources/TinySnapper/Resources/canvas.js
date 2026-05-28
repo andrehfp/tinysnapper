@@ -1,6 +1,7 @@
 (function () {
   let payload = window.__PAYLOAD || {};
   const interactive = Boolean(window.__INTERACTIVE);
+  const toolShortcuts = normalizeToolShortcuts(payload.toolShortcuts);
 
   const state = {
     annotations: Array.isArray(payload.annotations) ? payload.annotations.slice() : [],
@@ -372,6 +373,10 @@
       return;
     }
 
+    if (handleToolShortcut(event)) {
+      return;
+    }
+
     if (event.key === "Enter" && state.selectedId) {
       const annotation = findAnnotation(state.selectedId);
       const element = overlay.querySelector(`[data-id="${state.selectedId}"]`);
@@ -407,6 +412,28 @@
       renderAnnotations();
       notifyToolChanged();
     }
+  }
+
+  function handleToolShortcut(event) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || state.drag || state.create) {
+      return false;
+    }
+
+    const key = (event.key || "").toLowerCase();
+    if (key.length !== 1) {
+      return false;
+    }
+
+    const shortcut = toolShortcuts.find((item) => item.key === key);
+    if (!shortcut) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    state.tool = shortcut.tool || null;
+    notifyToolChanged();
+    return true;
   }
 
   function renderPreviewAnnotation() {
@@ -674,6 +701,27 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+  }
+
+  function normalizeToolShortcuts(value) {
+    const defaults = [
+      { key: "v", tool: null },
+      { key: "t", tool: "text" },
+      { key: "a", tool: "arrow" },
+      { key: "s", tool: "shape" },
+      { key: "r", tool: "redact" },
+    ];
+
+    if (!Array.isArray(value)) {
+      return defaults;
+    }
+
+    return value
+      .filter((shortcut) => typeof shortcut?.key === "string")
+      .map((shortcut) => ({
+        key: shortcut.key.toLowerCase(),
+        tool: typeof shortcut.tool === "string" ? shortcut.tool : null,
+      }));
   }
 
   function selectText(element) {
